@@ -63,6 +63,10 @@
     const scoreEl = document.getElementById('scoreDisplay');
     const hiEl = document.getElementById('hiDisplay');
 
+    // Sprite images
+    const imgRun = new Image(); imgRun.src = 'sprites/gitman.png';
+    const imgCrouch = new Image(); imgCrouch.src = 'sprites/gitman_crouch.png';
+
     let hiScore = 0;
     let state = 'idle'; // idle | running | dead
     let score = 0, frame = 0, speed = 5;
@@ -71,24 +75,24 @@
     // --- Dino ---
     const dino = {
       x: 80, y: GROUND, w: 44, h: 52,
-      vy: 0, gravity: 0.8,
+      vy: 0, gravity: 0.5,
       ducking: false,
       legFrame: 0,
-      get top() { return this.y - (this.ducking ? 28 : this.h); },
+      get top() { return this.y - (this.ducking ? 32 : this.h); },
       get bottom() { return this.y; },
       get right() { return this.x + this.w - 6; },
       get left() { return this.x + 6; }
     };
 
     function dinoJump() {
-      if (dino.top >= GROUND - 2) {
-        dino.vy = -16;
+      if (dino.y >= GROUND - 2) {
+        dino.vy = -12;
         dino.ducking = false;
       }
     }
 
     function dinoDuck(on) {
-      if (dino.top >= GROUND - 2) dino.ducking = on;
+      if (dino.y >= GROUND - 2) dino.ducking = on;
     }
 
     // --- Obstacles ---
@@ -164,72 +168,33 @@
     }
 
     function drawDino() {
-      const night = score > 500 && Math.floor(score / 500) % 2 === 1;
-      const col = night ? '#b0e0b0' : '#535353';
-      const x = dino.x, y = dino.y;
+      const onGround = dino.y >= GROUND - 2;
+      const wf = Math.floor(dino.legFrame / 6) % 2;
 
-      if (dino.ducking) {
-        // ducked dino
-        ctx.fillStyle = col;
-        ctx.fillRect(x, y - 28, 56, 28); // body
-        // head
-        ctx.fillRect(x + 32, y - 40, 24, 18);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(x + 48, y - 36, 5, 5);
-        ctx.fillStyle = col;
-        ctx.fillRect(x + 50, y - 34, 2, 2);
-        // legs running
-        const lf = Math.floor(dino.legFrame / 6) % 2;
-        ctx.fillStyle = col;
-        if (lf === 0) {
-          ctx.fillRect(x + 6, y - 14, 10, 14);
-          ctx.fillRect(x + 22, y - 8, 10, 8);
-        } else {
-          ctx.fillRect(x + 6, y - 8, 10, 8);
-          ctx.fillRect(x + 22, y - 14, 10, 14);
-        }
-        return;
+      // Yürüme animasyonu: hafif yukarı-aşağı sallanma
+      const bob = (onGround && !dino.ducking) ? (wf === 0 ? -2 : 0) : 0;
+
+      const img = dino.ducking ? imgCrouch : imgRun;
+      const drawH = dino.ducking ? 32 : dino.h;
+      const drawW = dino.ducking ? 56 : dino.w;
+
+      ctx.save();
+
+      // Gece modunda yeşilimsi renk tonu
+      if (score > 500 && Math.floor(score / 500) % 2 === 1) {
+        ctx.filter = 'hue-rotate(90deg) brightness(1.2)';
       }
 
-      // body
-      ctx.fillStyle = col;
-      ctx.fillRect(x + 4, y - dino.h + 16, 36, 30);
-      // tail
-      ctx.fillRect(x, y - dino.h + 28, 12, 10);
-      ctx.fillRect(x - 6, y - dino.h + 36, 10, 8);
-      // neck+head
-      ctx.fillRect(x + 28, y - dino.h, 24, 26);
-      // eye
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(x + 44, y - dino.h + 5, 7, 7);
-      ctx.fillStyle = col;
-      ctx.fillRect(x + 46, y - dino.h + 7, 3, 3);
-      // mouth
-      ctx.fillStyle = col;
-      ctx.fillRect(x + 50, y - dino.h + 18, 6, 4);
-      // arms
-      ctx.fillStyle = col;
-      ctx.fillRect(x + 28, y - dino.h + 26, 10, 6);
-
-      // legs
-      const onGround = dino.top >= GROUND - 4;
-      const lf = Math.floor(dino.legFrame / 6) % 2;
-      ctx.fillStyle = col;
-      if (onGround) {
-        if (lf === 0) {
-          ctx.fillRect(x + 10, y - 22, 10, 22);
-          ctx.fillRect(x + 24, y - 14, 10, 14);
-          ctx.fillRect(x + 8, y - 4, 14, 4);
-        } else {
-          ctx.fillRect(x + 10, y - 14, 10, 14);
-          ctx.fillRect(x + 24, y - 22, 10, 22);
-          ctx.fillRect(x + 22, y - 4, 14, 4);
-        }
+      // Zıplama sırasında hafif ileri eğim
+      if (!onGround) {
+        ctx.translate(dino.x + drawW / 2, dino.y - drawH / 2 + bob);
+        ctx.rotate(0.15);
+        ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
       } else {
-        // jumping pose
-        ctx.fillRect(x + 10, y - 18, 10, 18);
-        ctx.fillRect(x + 24, y - 12, 10, 12);
+        ctx.drawImage(img, dino.x, dino.y - drawH + bob, drawW, drawH);
       }
+
+      ctx.restore();
     }
 
     function drawCactus(o) {
@@ -334,14 +299,14 @@
     function update() {
       frame++;
       score += 0.1 + speed * 0.02;
-      speed = 5 + Math.floor(score / 100) * 0.3;
-      if (speed > 15) speed = 15;
+      speed = 4 + Math.floor(score / 100) * 0.25;
+      if (speed > 13) speed = 13;
 
       // dino physics
       dino.vy += dino.gravity;
       dino.y += dino.vy;
       if (dino.y >= GROUND) { dino.y = GROUND; dino.vy = 0; }
-      if (dino.top < GROUND) dino.legFrame++;
+      if (dino.y >= GROUND) dino.legFrame++; else dino.legFrame = 0;
 
       // clouds
       clouds.forEach(c => c.x -= speed * 0.3);
