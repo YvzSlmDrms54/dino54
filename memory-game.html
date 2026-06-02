@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meyve Hafıza Oyunu</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  font-family: 'Segoe UI', sans-serif;
+  color: #fff;
+  overflow-x: hidden;
+}
+
+.screen { display: none; }
+.screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+
+/* ── PARTICLES ── */
+.particle {
+  position: fixed; pointer-events: none; font-size: 1.4rem;
+  opacity: 0; animation: floatUp 7s ease-in infinite; z-index: 0;
+}
+@keyframes floatUp {
+  0%   { transform: translateY(100vh) scale(.5); opacity:.5; }
+  100% { transform: translateY(-15vh) scale(1.2); opacity:0; }
+}
+
+/* ── MENU ── */
+#menu-screen { gap: 48px; }
+
+.menu-title {
+  font-size: 3rem; font-weight: 800; letter-spacing: 2px;
+  background: linear-gradient(90deg,#f9ca24,#f0932b,#e55039);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  animation: titlePulse 3s ease-in-out infinite;
+}
+@keyframes titlePulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.3)} }
+
+.menu-subtitle { font-size:1rem; color:#aaa; margin-top:-8px; letter-spacing:4px; text-transform:uppercase; }
+
+.menu-buttons { display:flex; gap:32px; flex-wrap:wrap; justify-content:center; }
+
+.menu-btn {
+  width:200px; height:200px; border-radius:24px; border:none; cursor:pointer;
+  font-size:1rem; font-weight:700; color:#fff;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;
+  position: relative; overflow: hidden;
+}
+.menu-btn::before {
+  content:''; position:absolute; inset:0;
+  background:rgba(255,255,255,.08); opacity:0; transition:opacity .25s; border-radius:24px;
+}
+.menu-btn:hover::before { opacity:1; }
+.menu-btn:hover { transform:scale(1.12); }
+
+.btn-mode1 { background:linear-gradient(135deg,#6c5ce7,#a29bfe); box-shadow:0 8px 32px rgba(108,92,231,.4); }
+.btn-mode1:hover { box-shadow:0 16px 48px rgba(108,92,231,.7); }
+.btn-mode2 { background:linear-gradient(135deg,#00b894,#00cec9); box-shadow:0 8px 32px rgba(0,184,148,.4); }
+.btn-mode2:hover { box-shadow:0 16px 48px rgba(0,184,148,.7); }
+
+.btn-icon  { font-size:3rem; }
+.btn-label { font-size:1rem; letter-spacing:1px; }
+.btn-desc  { font-size:.75rem; opacity:.8; text-align:center; line-height:1.4; padding:0 8px; }
+
+/* ── DIFFICULTY SCREEN ── */
+#diff-screen { gap:36px; }
+.diff-title { font-size:2rem; font-weight:700; color:#f9ca24; }
+.diff-grid  { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+
+.diff-btn {
+  width:155px; height:135px; border-radius:20px; border:none; cursor:pointer; color:#fff;
+  font-weight:700; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:8px; transition:transform .25s cubic-bezier(.34,1.56,.64,1), filter .2s;
+}
+.diff-btn:hover { transform:scale(1.1); filter:brightness(1.1); }
+
+.diff-easy    { background:linear-gradient(135deg,#27ae60,#2ecc71); box-shadow:0 6px 20px rgba(46,204,113,.4); }
+.diff-medium  { background:linear-gradient(135deg,#f39c12,#f9ca24); box-shadow:0 6px 20px rgba(243,156,18,.4); }
+.diff-hard    { background:linear-gradient(135deg,#e74c3c,#c0392b); box-shadow:0 6px 20px rgba(231,76,60,.4); }
+.diff-special { background:linear-gradient(135deg,#8e44ad,#9b59b6); box-shadow:0 6px 20px rgba(142,68,173,.4); }
+
+.diff-icon { font-size:2rem; }
+.diff-name { font-size:1rem; }
+.diff-time { font-size:.75rem; opacity:.85; }
+
+.back-btn {
+  background:transparent; border:2px solid rgba(255,255,255,.3); color:#fff;
+  padding:10px 28px; border-radius:50px; cursor:pointer; font-size:.9rem;
+  transition:all .2s;
+}
+.back-btn:hover { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.6); }
+
+/* ── SPECIAL TIME PICKER ── */
+#special-screen { gap:36px; }
+.special-title { font-size:1.8rem; font-weight:700; color:#a29bfe; }
+.special-sub   { font-size:.95rem; color:#aaa; }
+
+.time-display {
+  font-size:5rem; font-weight:800; color:#f9ca24;
+  text-shadow:0 0 30px rgba(249,202,36,.5);
+  min-width:120px; text-align:center;
+}
+
+.time-controls { display:flex; align-items:center; gap:20px; }
+
+.time-btn {
+  width:56px; height:56px; border-radius:50%; border:none; cursor:pointer;
+  background:rgba(255,255,255,.12); color:#fff; font-size:1.8rem; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  transition:transform .15s, background .15s;
+}
+.time-btn:hover { background:rgba(255,255,255,.25); transform:scale(1.1); }
+.time-btn:active { transform:scale(.95); }
+
+.range-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.time-range {
+  -webkit-appearance:none; appearance:none;
+  width:280px; height:8px; border-radius:99px;
+  background:linear-gradient(90deg,#6c5ce7,#a29bfe);
+  outline:none; cursor:pointer;
+}
+.time-range::-webkit-slider-thumb {
+  -webkit-appearance:none; width:24px; height:24px; border-radius:50%;
+  background:#f9ca24; box-shadow:0 0 8px rgba(249,202,36,.6); cursor:pointer;
+}
+.range-labels { display:flex; justify-content:space-between; width:280px; font-size:.75rem; color:#aaa; }
+
+.start-btn {
+  padding:14px 48px; border-radius:50px; border:none; cursor:pointer;
+  background:linear-gradient(135deg,#8e44ad,#9b59b6); color:#fff;
+  font-size:1rem; font-weight:700; letter-spacing:1px;
+  box-shadow:0 6px 20px rgba(142,68,173,.5);
+  transition:transform .2s, box-shadow .2s;
+}
+.start-btn:hover { transform:scale(1.05); box-shadow:0 10px 28px rgba(142,68,173,.7); }
+
+/* ── GAME SCREEN ── */
+#game-screen { gap:20px; padding:20px; }
+
+.game-header {
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:center;
+}
+
+.hud-pill {
+  background:rgba(255,255,255,.1); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.15);
+  padding:8px 18px; border-radius:50px; font-size:.9rem; font-weight:600;
+}
+.hud-pill span { color:#f9ca24; margin-left:4px; }
+
+/* preview timer */
+.timer-wrap { display:none; flex-direction:column; align-items:center; gap:6px; width:320px; }
+.timer-wrap.visible { display:flex; }
+.timer-label  { font-size:.85rem; color:#aaa; }
+.timer-bar-bg { width:100%; height:10px; background:rgba(255,255,255,.1); border-radius:99px; overflow:hidden; }
+.timer-bar-fill {
+  height:100%; border-radius:99px;
+  background:linear-gradient(90deg,#f9ca24,#e55039); transition:width .1s linear;
+}
+.timer-countdown { font-size:1.5rem; font-weight:800; color:#f9ca24; }
+
+/* ── MODE 1 CARD GRID ── */
+.card-grid { display:grid; gap:12px; perspective:1000px; }
+
+.card {
+  width:90px; height:90px; cursor:pointer;
+  position:relative; transform-style:preserve-3d;
+  transition:transform .4s cubic-bezier(.25,.8,.25,1); user-select:none;
+}
+.card.flipped { transform:rotateY(180deg); }
+.card.matched { transform:rotateY(180deg); animation:matchPop .4s ease; }
+.card.shake   { animation:shake .35s ease; }
+
+@keyframes matchPop {
+  0%  {transform:rotateY(180deg) scale(1)}
+  40% {transform:rotateY(180deg) scale(1.2)}
+  70% {transform:rotateY(180deg) scale(.95)}
+  100%{transform:rotateY(180deg) scale(1)}
+}
+@keyframes shake {
+  0%,100%{transform:rotateY(180deg) translateX(0)}
+  20%{transform:rotateY(180deg) translateX(-6px)}
+  40%{transform:rotateY(180deg) translateX(6px)}
+  60%{transform:rotateY(180deg) translateX(-4px)}
+  80%{transform:rotateY(180deg) translateX(4px)}
+}
+
+.card-face {
+  position:absolute; inset:0; border-radius:16px;
+  display:flex; align-items:center; justify-content:center;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
+}
+.card-front {
+  background:linear-gradient(135deg,#2d3436,#636e72);
+  border:2px solid rgba(255,255,255,.1); font-size:2rem; color:rgba(255,255,255,.15);
+  box-shadow:0 4px 16px rgba(0,0,0,.3);
+}
+.card-back {
+  background:linear-gradient(135deg,#fdcb6e,#e17055);
+  border:2px solid rgba(255,255,255,.3);
+  transform:rotateY(180deg); font-size:2.6rem; box-shadow:0 4px 16px rgba(0,0,0,.3);
+}
+.card.matched .card-back {
+  background:linear-gradient(135deg,#55efc4,#00b894);
+  border-color:#00b894;
+}
+
+/* ── MODE 2: PLACEMENT GRID ── */
+.place-area { display:flex; flex-direction:column; align-items:center; gap:20px; }
+
+.place-grid {
+  display:grid;
+  grid-template-columns: repeat(4, 86px);
+  gap:10px;
+}
+
+.place-slot {
+  width:86px; height:86px; border-radius:16px;
+  border:2px dashed rgba(255,255,255,.25);
+  background:rgba(255,255,255,.05);
+  display:flex; align-items:center; justify-content:center;
+  font-size:2.4rem;
+  transition:border-color .2s, background .2s, transform .15s;
+  position:relative;
+}
+.place-slot.preview-show {
+  background:linear-gradient(135deg,#fdcb6e,#e17055);
+  border:2px solid rgba(255,255,255,.3);
+  box-shadow:0 4px 16px rgba(0,0,0,.3);
+}
+.place-slot.drag-over {
+  border-color:#a29bfe;
+  background:rgba(162,155,254,.2);
+  transform:scale(1.05);
+}
+.place-slot.correct {
+  background:linear-gradient(135deg,#55efc4,#00b894);
+  border-color:#00b894; border-style:solid;
+  animation:matchPop .4s ease;
+}
+.place-slot.wrong {
+  animation:slotWrong .4s ease;
+}
+@keyframes slotWrong {
+  0%,100%{background:rgba(255,255,255,.05)}
+  25%,75%{background:rgba(231,76,60,.35); border-color:#e74c3c;}
+}
+
+/* fruit palette */
+.palette-label { font-size:.8rem; color:#aaa; letter-spacing:2px; text-transform:uppercase; }
+.palette {
+  display:flex; flex-wrap:wrap; gap:10px;
+  justify-content:center; max-width:440px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:20px; padding:16px;
+}
+
+.fruit-chip {
+  width:60px; height:60px; border-radius:14px; font-size:2rem;
+  background:linear-gradient(135deg,#2d3436,#636e72);
+  border:2px solid rgba(255,255,255,.15);
+  display:flex; align-items:center; justify-content:center;
+  cursor:grab; transition:transform .15s, box-shadow .15s, opacity .2s;
+  user-select:none;
+}
+.fruit-chip:hover  { transform:scale(1.1); box-shadow:0 6px 18px rgba(0,0,0,.4); }
+.fruit-chip:active { cursor:grabbing; transform:scale(1.05); }
+.fruit-chip.placed { opacity:0; pointer-events:none; }
+.fruit-chip.dragging { opacity:.5; }
+
+/* ── MODAL / OVERLAY ── */
+.overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.7); backdrop-filter:blur(6px);
+  z-index:100; align-items:center; justify-content:center;
+}
+.overlay.visible { display:flex; }
+
+.modal {
+  background:linear-gradient(135deg,#2d3436,#1e272e);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:28px; padding:44px 52px; text-align:center;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+  animation:modalIn .35s cubic-bezier(.34,1.56,.64,1);
+  max-width:400px; width:90%;
+}
+@keyframes modalIn {
+  from{transform:scale(.7);opacity:0}
+  to  {transform:scale(1);opacity:1}
+}
+
+.modal-icon  { font-size:4rem; margin-bottom:12px; }
+.modal-title { font-size:2rem; font-weight:800; margin-bottom:8px; }
+.modal-sub   { font-size:1rem; color:#aaa; margin-bottom:32px; line-height:1.7; }
+.modal-sub span { color:#f9ca24; font-weight:700; }
+.modal-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+
+.mod-btn {
+  padding:12px 28px; border-radius:50px; border:none; cursor:pointer;
+  font-size:.95rem; font-weight:700; transition:transform .2s, box-shadow .2s;
+}
+.mod-btn:hover { transform:scale(1.06); }
+.mod-btn-primary   { background:linear-gradient(135deg,#6c5ce7,#a29bfe); color:#fff; box-shadow:0 4px 16px rgba(108,92,231,.5); }
+.mod-btn-secondary { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
+</style>
+</head>
+<body>
+
+<!-- ═══ MENU ═══ -->
+<div id="menu-screen" class="screen active">
+  <div style="text-align:center">
+    <div class="menu-title">🍓 HAFIZA OYUNU</div>
+    <div class="menu-subtitle">Meyve Eşleştirme</div>
+  </div>
+  <div class="menu-buttons">
+    <button class="menu-btn btn-mode1" onclick="startMode1()">
+      <span class="btn-icon">🎯</span>
+      <span class="btn-label">SONSUZ MODLAR</span>
+      <span class="btn-desc">24 kart · Eşleştir · Sonraki level</span>
+    </button>
+    <button class="menu-btn btn-mode2" onclick="showDifficulty()">
+      <span class="btn-icon">⏱️</span>
+      <span class="btn-label">YERLEŞTİRME MODU</span>
+      <span class="btn-desc">16 kart · Ezberle · Sürükle-bırak</span>
+    </button>
+  </div>
+</div>
+
+<!-- ═══ DIFFICULTY ═══ -->
+<div id="diff-screen" class="screen">
+  <div class="diff-title">⚡ Zorluk Seç</div>
+  <div class="diff-grid">
+    <button class="diff-btn diff-easy"    onclick="startMode2('easy')">
+      <span class="diff-icon">😊</span>
+      <span class="diff-name">KOLAY</span>
+      <span class="diff-time">10 saniye</span>
+    </button>
+    <button class="diff-btn diff-medium"  onclick="startMode2('medium')">
+      <span class="diff-icon">😐</span>
+      <span class="diff-name">ORTA</span>
+      <span class="diff-time">7 saniye</span>
+    </button>
+    <button class="diff-btn diff-hard"    onclick="startMode2('hard')">
+      <span class="diff-icon">😤</span>
+      <span class="diff-name">ZOR</span>
+      <span class="diff-time">5 saniye</span>
+    </button>
+    <button class="diff-btn diff-special" onclick="showSpecialPicker()">
+      <span class="diff-icon">🎲</span>
+      <span class="diff-name">ÖZEL</span>
+      <span class="diff-time">Süreyi sen seç</span>
+    </button>
+  </div>
+  <button class="back-btn" onclick="goMenu()">← Geri</button>
+</div>
+
+<!-- ═══ SPECIAL TIME PICKER ═══ -->
+<div id="special-screen" class="screen">
+  <div class="special-title">🎲 Özel Süre</div>
+  <div class="special-sub">Önizleme için kaç saniye istiyorsun?</div>
+
+  <div class="time-controls">
+    <button class="time-btn" onclick="changeSpecialTime(-1)">−</button>
+    <div class="time-display" id="special-time-display">6</div>
+    <button class="time-btn" onclick="changeSpecialTime(+1)">+</button>
+  </div>
+
+  <div class="range-wrap">
+    <input type="range" class="time-range" id="special-range"
+           min="2" max="30" value="6" oninput="syncSpecialTime(this.value)">
+    <div class="range-labels"><span>2s</span><span>30s</span></div>
+  </div>
+
+  <button class="start-btn" onclick="startMode2('special')">Oyuna Başla 🚀</button>
+  <button class="back-btn" onclick="showDifficulty()">← Geri</button>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div id="game-screen" class="screen">
+  <div class="game-header">
+    <div class="hud-pill" id="hud-mode">Mod: —</div>
+    <div class="hud-pill" id="hud-level" style="display:none">Level: <span id="level-num">1</span></div>
+    <div class="hud-pill" id="hud-diff"  style="display:none">Zorluk: <span id="diff-label">—</span></div>
+    <div class="hud-pill" id="hud-score" style="display:none">Doğru: <span id="score-num">0</span> / <span id="score-total">16</span></div>
+    <div class="hud-pill" id="hud-match" style="display:none">Eşleşme: <span id="match-count">0</span> / <span id="match-total">12</span></div>
+    <div class="hud-pill" id="hud-moves">Hamle: <span id="move-count">0</span></div>
+    <button class="back-btn" onclick="goMenu()">← Menü</button>
+  </div>
+
+  <div class="timer-wrap" id="timer-wrap">
+    <div class="timer-label">🧠 Kartları Ezberle!</div>
+    <div class="timer-bar-bg"><div class="timer-bar-fill" id="timer-bar" style="width:100%"></div></div>
+    <div class="timer-countdown" id="timer-countdown">10</div>
+  </div>
+
+  <!-- Mode 1: classic flip grid -->
+  <div class="card-grid" id="card-grid" style="display:none"></div>
+
+  <!-- Mode 2: placement -->
+  <div class="place-area" id="place-area" style="display:none">
+    <div class="place-grid" id="place-grid"></div>
+    <div class="palette-label">Meyveleri sürükle → yerine bırak</div>
+    <div class="palette" id="palette"></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL ═══ -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-icon"  id="modal-icon">🎉</div>
+    <div class="modal-title" id="modal-title">Tebrikler!</div>
+    <div class="modal-sub"   id="modal-sub"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<script>
+// ─── FRUITS ───────────────────────────────────────────────────────────────
+const FRUITS24 = ['🍎','🍊','🍋','🍇','🍓','🍑','🍍','🥝','🍒','🍉','🍌','🫐',
+                  '🍈','🍐','🥭','🍅','🥥','🫒','🍏','🍆','🥑','🌽','🥕','🍄'];
+const FRUITS16 = ['🍎','🍊','🍋','🍇','🍓','🍑','🍍','🥝',
+                  '🍒','🍉','🍌','🫐','🍈','🍐','🥭','🍅'];
+
+// ─── GLOBAL STATE ─────────────────────────────────────────────────────────
+let gameMode      = 1;
+let difficulty    = null;
+let level         = 1;
+let moves         = 0;
+let matches       = 0;
+let totalPairs    = 0;
+let selected      = [];
+let locked        = false;
+let cards         = [];
+let previewTimer  = null;
+let previewSecs   = 0;
+let previewTotal  = 0;
+let specialTime   = 6;
+
+// placement state
+let slotFruits    = [];   // correct fruit for each slot index
+let placedCorrect = 0;
+let dragFruit     = null; // fruit currently being dragged
+let dragChipEl    = null;
+
+// ─── PARTICLES ────────────────────────────────────────────────────────────
+;(function(){
+  const f=['🍎','🍊','🍋','🍇','🍓','🍑'];
+  for(let i=0;i<10;i++){
+    const p=document.createElement('div'); p.className='particle';
+    p.textContent=f[Math.floor(Math.random()*f.length)];
+    p.style.left=(Math.random()*100)+'vw';
+    p.style.animationDelay=(Math.random()*8)+'s';
+    p.style.animationDuration=(5+Math.random()*5)+'s';
+    document.body.appendChild(p);
+  }
+})();
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goMenu(){ clearPreview(); showScreen('menu-screen'); }
+function showDifficulty(){ showScreen('diff-screen'); }
+function showSpecialPicker(){ showScreen('special-screen'); }
+
+// ─── SPECIAL TIME PICKER ──────────────────────────────────────────────────
+function changeSpecialTime(delta){
+  specialTime = Math.max(2, Math.min(30, specialTime + delta));
+  document.getElementById('special-time-display').textContent = specialTime;
+  document.getElementById('special-range').value = specialTime;
+}
+function syncSpecialTime(val){
+  specialTime = parseInt(val);
+  document.getElementById('special-time-display').textContent = specialTime;
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────
+function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function resetCounters(){
+  moves=0; matches=0; selected=[]; locked=false; placedCorrect=0;
+  document.getElementById('move-count').textContent='0';
+  document.getElementById('match-count').textContent='0';
+  document.getElementById('score-num').textContent='0';
+}
+
+// ─── MODE 1: SONSUZ (24 kart, çiftler) ───────────────────────────────────
+function startMode1(){ gameMode=1; level=1; buildMode1(); }
+
+function buildMode1(){
+  document.getElementById('card-grid').style.display='grid';
+  document.getElementById('place-area').style.display='none';
+  document.getElementById('hud-mode').textContent='Mod: Sonsuz';
+  document.getElementById('hud-level').style.display='';
+  document.getElementById('hud-diff').style.display='none';
+  document.getElementById('hud-score').style.display='none';
+  document.getElementById('hud-match').style.display='';
+  document.getElementById('hud-moves').style.display='';
+  document.getElementById('level-num').textContent=level;
+  document.getElementById('timer-wrap').classList.remove('visible');
+
+  totalPairs=12;
+  document.getElementById('match-total').textContent=totalPairs;
+  resetCounters();
+
+  const fruitPool=shuffle(FRUITS24).slice(0,12);
+  const pairs=shuffle([...fruitPool,...fruitPool]);
+  cards=pairs.map((fruit,i)=>({id:i,fruit,flipped:false,matched:false}));
+
+  const grid=document.getElementById('card-grid');
+  grid.style.gridTemplateColumns='repeat(6, 90px)';
+  grid.innerHTML='';
+  cards.forEach((c,i)=>{
+    const el=document.createElement('div');
+    el.className='card'; el.id='card-'+i;
+    el.innerHTML=`<div class="card-face card-front">🂠</div><div class="card-face card-back">${c.fruit}</div>`;
+    el.addEventListener('click',()=>onCardClick(i));
+    grid.appendChild(el);
+  });
+  showScreen('game-screen');
+}
+
+function onCardClick(i){
+  if(locked) return;
+  const c=cards[i];
+  if(c.flipped||c.matched) return;
+  if(selected.length>=2) return;
+  c.flipped=true;
+  document.getElementById('card-'+i).classList.add('flipped');
+  selected.push(i);
+  if(selected.length===2){ moves++; document.getElementById('move-count').textContent=moves; locked=true; setTimeout(checkMatch1,700); }
+}
+
+function checkMatch1(){
+  const [a,b]=selected;
+  if(cards[a].fruit===cards[b].fruit){
+    cards[a].matched=cards[b].matched=true;
+    document.getElementById('card-'+a).classList.add('matched');
+    document.getElementById('card-'+b).classList.add('matched');
+    matches++; document.getElementById('match-count').textContent=matches;
+    selected=[]; locked=false;
+    if(matches===totalPairs) setTimeout(onWin1,500);
+  } else {
+    const ea=document.getElementById('card-'+a), eb=document.getElementById('card-'+b);
+    ea.classList.add('shake'); eb.classList.add('shake');
+    setTimeout(()=>{ ea.classList.remove('shake','flipped'); eb.classList.remove('shake','flipped'); cards[a].flipped=cards[b].flipped=false; selected=[]; locked=false; },600);
+  }
+}
+
+function onWin1(){
+  const icon=level<=3?'🎉':level<=6?'🏆':'🌟';
+  document.getElementById('modal-actions').innerHTML=`
+    <button class="mod-btn mod-btn-primary" onclick="nextLevel1()">Level ${level+1} 🚀</button>
+    <button class="mod-btn mod-btn-secondary" onclick="goMenu()">Menü</button>`;
+  showModal(icon,`Level ${level} Tamamlandı!`,`Tebrikler! <span>${moves}</span> hamlede bitirdin.`);
+}
+
+function nextLevel1(){ closeModal(); level++; buildMode1(); }
+
+// ─── MODE 2: YERLEŞTİRME (16 kart, sürükle-bırak) ────────────────────────
+const DIFF_LABELS={'easy':'😊 Kolay','medium':'😐 Orta','hard':'😤 Zor','special':'🎲 Özel'};
+const DIFF_TIME  ={'easy':10,'medium':7,'hard':5};
+
+function startMode2(diff){
+  difficulty=diff; gameMode=2; level=1; buildMode2(); showScreen('game-screen');
+}
+
+function buildMode2(){
+  document.getElementById('card-grid').style.display='none';
+  document.getElementById('place-area').style.display='flex';
+  document.getElementById('hud-mode').textContent='Mod: Yerleştirme';
+  document.getElementById('hud-level').style.display= difficulty==='special' ? 'none' : '';
+  document.getElementById('hud-diff').style.display='';
+  document.getElementById('hud-score').style.display='';
+  document.getElementById('hud-match').style.display='none';
+  document.getElementById('hud-moves').style.display='';
+  document.getElementById('level-num').textContent=level;
+  document.getElementById('diff-label').textContent=DIFF_LABELS[difficulty];
+  document.getElementById('score-total').textContent=16;
+  resetCounters();
+
+  previewTotal = difficulty==='special' ? specialTime : DIFF_TIME[difficulty];
+
+  // build random slot layout
+  slotFruits=shuffle([...FRUITS16]);
+
+  buildPlaceGrid(true);   // show fruits during preview
+  buildPalette(false);     // palette hidden during preview
+
+  startPreview2();
+}
+
+function buildPlaceGrid(showFruits){
+  const grid=document.getElementById('place-grid');
+  grid.innerHTML='';
+  slotFruits.forEach((fruit,i)=>{
+    const slot=document.createElement('div');
+    slot.className='place-slot'+(showFruits?' preview-show':'');
+    slot.id='slot-'+i;
+    slot.textContent=showFruits ? fruit : '';
+    if(!showFruits){
+      slot.addEventListener('dragover', e=>{ e.preventDefault(); slot.classList.add('drag-over'); });
+      slot.addEventListener('dragleave',   ()=> slot.classList.remove('drag-over'));
+      slot.addEventListener('drop',      e=>{ e.preventDefault(); onDrop(i); });
+      // touch
+      slot.addEventListener('touchend',  e=>{ e.preventDefault(); onDrop(i); },{passive:false});
+    }
+    grid.appendChild(slot);
+  });
+}
+
+function buildPalette(visible){
+  const pal=document.getElementById('palette');
+  pal.innerHTML='';
+  document.querySelector('.palette-label').style.opacity= visible ? '1' : '0';
+  if(!visible) return;
+
+  const shuffled=shuffle([...FRUITS16]);
+  shuffled.forEach(fruit=>{
+    const chip=document.createElement('div');
+    chip.className='fruit-chip'; chip.textContent=fruit;
+    chip.dataset.fruit=fruit; chip.draggable=true;
+
+    chip.addEventListener('dragstart', e=>{
+      dragFruit=fruit; dragChipEl=chip;
+      chip.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move';
+    });
+    chip.addEventListener('dragend', ()=>{ chip.classList.remove('dragging'); });
+
+    // touch drag
+    chip.addEventListener('touchstart', e=>{ dragFruit=fruit; dragChipEl=chip; },{passive:true});
+    chip.addEventListener('touchmove',  e=>{ e.preventDefault(); moveTouchDrag(e); },{passive:false});
+
+    pal.appendChild(chip);
+  });
+}
+
+// touch drag ghost
+let touchGhost=null;
+function moveTouchDrag(e){
+  const t=e.touches[0];
+  if(!touchGhost){
+    touchGhost=document.createElement('div');
+    touchGhost.style.cssText='position:fixed;pointer-events:none;z-index:9999;font-size:2.4rem;transform:translate(-50%,-50%)';
+    touchGhost.textContent=dragFruit;
+    document.body.appendChild(touchGhost);
+  }
+  touchGhost.style.left=t.clientX+'px'; touchGhost.style.top=t.clientY+'px';
+
+  // highlight slot under finger
+  document.querySelectorAll('.place-slot').forEach(s=>s.classList.remove('drag-over'));
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  if(el && el.classList.contains('place-slot')) el.classList.add('drag-over');
+}
+
+document.addEventListener('touchend', e=>{
+  if(touchGhost){ touchGhost.remove(); touchGhost=null; }
+  if(!dragFruit) return;
+  const t=e.changedTouches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  if(el && el.classList.contains('place-slot')){
+    const idx=parseInt(el.id.replace('slot-',''));
+    onDrop(idx);
+  }
+  document.querySelectorAll('.place-slot').forEach(s=>s.classList.remove('drag-over'));
+  dragFruit=null; dragChipEl=null;
+});
+
+function onDrop(slotIdx){
+  if(!dragFruit) return;
+  const slot=document.getElementById('slot-'+slotIdx);
+  if(!slot || slot.classList.contains('correct')) return;
+  slot.classList.remove('drag-over');
+
+  moves++; document.getElementById('move-count').textContent=moves;
+
+  if(dragFruit===slotFruits[slotIdx]){
+    // correct!
+    slot.textContent=dragFruit;
+    slot.classList.add('correct');
+    if(dragChipEl) dragChipEl.classList.add('placed');
+    placedCorrect++;
+    document.getElementById('score-num').textContent=placedCorrect;
+    if(placedCorrect===16) setTimeout(onWin2,600);
+  } else {
+    // wrong
+    slot.classList.add('wrong');
+    setTimeout(()=>slot.classList.remove('wrong'),400);
+  }
+  dragFruit=null; dragChipEl=null;
+}
+
+// ─── PREVIEW TIMER ────────────────────────────────────────────────────────
+function startPreview2(){
+  previewSecs=previewTotal;
+  const wrap=document.getElementById('timer-wrap');
+  const bar =document.getElementById('timer-bar');
+  const num =document.getElementById('timer-countdown');
+  wrap.classList.add('visible');
+  num.textContent=previewSecs; bar.style.width='100%';
+
+  previewTimer=setInterval(()=>{
+    previewSecs--;
+    num.textContent=previewSecs;
+    bar.style.width=(previewSecs/previewTotal*100)+'%';
+    if(previewSecs<=0){ clearPreview(); revealPhase(); }
+  },1000);
+}
+
+function clearPreview(){
+  if(previewTimer){ clearInterval(previewTimer); previewTimer=null; }
+  document.getElementById('timer-wrap').classList.remove('visible');
+}
+
+function revealPhase(){
+  buildPlaceGrid(false);    // empty slots
+  buildPalette(true);       // show shuffled palette
+}
+
+// ─── WIN ──────────────────────────────────────────────────────────────────
+function onWin2(){
+  if(difficulty==='special'){
+    document.getElementById('modal-actions').innerHTML=`
+      <button class="mod-btn mod-btn-primary"   onclick="restartMode2()">Tekrar 🔄</button>
+      <button class="mod-btn mod-btn-secondary"  onclick="showSpecialPicker()">Süre Değiştir</button>
+      <button class="mod-btn mod-btn-secondary"  onclick="goMenu()">Menü</button>`;
+    showModal('🎲','Mükemmel!',`<span>${moves}</span> hamlede tamamladın!<br>Özel modda level yok.`);
+  } else {
+    document.getElementById('modal-actions').innerHTML=`
+      <button class="mod-btn mod-btn-primary"   onclick="nextLevel2()">Level ${level+1} 🚀</button>
+      <button class="mod-btn mod-btn-secondary"  onclick="goMenu()">Menü</button>`;
+    showModal('🏅',`Level ${level} Tamamlandı!`,`<span>${DIFF_LABELS[difficulty]}</span><br><span>${moves}</span> hamlede tüm meyveleri yerleştirdin!`);
+  }
+}
+
+function nextLevel2(){ closeModal(); level++; buildMode2(); }
+function restartMode2(){ closeModal(); buildMode2(); }
+
+// ─── MODAL HELPERS ────────────────────────────────────────────────────────
+function showModal(icon,title,sub){
+  document.getElementById('modal-icon').textContent=icon;
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-sub').innerHTML=sub;
+  document.getElementById('overlay').classList.add('visible');
+}
+function closeModal(){ document.getElementById('overlay').classList.remove('visible'); }
+</script>
+</body>
+</html>
