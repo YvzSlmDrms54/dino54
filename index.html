@@ -74,14 +74,14 @@
 
     // --- Dino ---
     const dino = {
-      x: 80, y: GROUND, w: 44, h: 52,
+      x: 80, y: GROUND, w: 48, h: 64,
       vy: 0, gravity: 0.5,
       ducking: false,
       legFrame: 0,
-      get top() { return this.y - (this.ducking ? 32 : this.h); },
+      get top() { return this.y - (this.ducking ? 40 : this.h); },
       get bottom() { return this.y; },
-      get right() { return this.x + this.w - 6; },
-      get left() { return this.x + 6; }
+      get right() { return this.x + this.w - 8; },
+      get left() { return this.x + 8; }
     };
 
     function dinoJump() {
